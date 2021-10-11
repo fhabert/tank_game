@@ -9,6 +9,7 @@ pygame.display.set_caption('Tank')
 playground = pygame.image.load('images/bg.jpg')
 player = pygame.image.load('images/tank.png')
 player2 = pygame.image.load('images/ennemi.png')
+soucoupe = pygame.image.load('images/ovni.png')
 manche = pygame.image.load('images/tir_manche.png')
 myfont = pygame.font.Font(pygame.font.get_default_font(), 50)
 myfont_life = pygame.font.Font(pygame.font.get_default_font(), 40)
@@ -22,11 +23,13 @@ class Game():
         self.x_right = 600
         self.turn_move = 0
         self.moving = True
+        self.ennemi_moving = False
 
     def draw_game(self):
         window.blit(playground, (0,0))
         window.blit(player, (my_tank.posx, my_tank.posy))
         window.blit(player2, (ennemi.posx, ennemi.posy))
+        window.blit(soucoupe, (300, 40))
         my_tank.hitbox = [my_tank.posx, my_tank.posy, pl_width, pl_height]
         ennemi.hitbox = [ennemi.posx, ennemi.posy, pl_width, pl_height]
         if bullets != []:
@@ -50,20 +53,30 @@ class Game():
             item.draw_bomb()
             if item.posx > game.x_right or item.posy > field.hitbox[1]:
                 bullets.pop()
+                self.ennemi_moving = True
                 self.moving = True
             elif (item.posx > ennemi.hitbox[0] and item.posx < ennemi.hitbox[0] + ennemi.hitbox[2]) and (item.posy > ennemi.hitbox[1] and item.posy < ennemi.hitbox[1] + ennemi.hitbox[3]):
                 self.draw_hit(item.author)
                 ennemi.life -= 1
+                if ennemi.life == 0:
+                    self.draw_game_over(ennemi)
+                self.ennemi_moving = True
             elif (item.posx > my_tank.hitbox[0] and item.posx < my_tank.hitbox[0] + my_tank.hitbox[2]) and (item.posy > my_tank.hitbox[1] and item.posy < my_tank.hitbox[1] + my_tank.hitbox[3]):
                 self.draw_hit(item.author)
                 self.moving = True
                 my_tank.life -= 1
+                if my_tank.life == 0:
+                    self.draw_game_over(my_tank)
+                self.ennemi_moving = True
         else: 
             if self.turn_move == 0:
                 points = get_trajectory(my_tank, 0.49)
-            else:
-                points = get_trajectory(ennemi, 0.49)
-            draw_trajectory(points, 2)
+            # else:
+            #     points = get_trajectory(ennemi, 0.49)
+                draw_trajectory(points, 2)
+            if self.turn_move == 1 and self.ennemi_moving:
+                ennemi.move_random()
+                self.ennemi_moving = False
         ennemi.draw_life()
         my_tank.draw_life()
         pygame.display.update()
@@ -76,6 +89,19 @@ class Game():
         time.sleep(1)
         bullets.pop()
 
+    def draw_game_over(self, object):
+        text = { "player": "You're dead..",
+                 "ennemi": "You win!!" }
+        if object.name == "player":
+            text_surface = myfont.render(text["player"], True, (255,255,255))
+            window.blit(text_surface, (window.get_width() / 2 - len(text["player"]) * 6, 40))
+        else:
+            text_surface = myfont.render(text["ennemi"], True, (255,255,255))
+            window.blit(text_surface, (window.get_width() / 2 - len(text["ennemi"]) * 6, 40))
+        pygame.display.update()
+        time.sleep(1)
+        ennemi.life = 3
+        my_tank.life = 2
 
 class Tank():
     def __init__(self, posx, posy, angle, name, life):
@@ -110,6 +136,16 @@ class Tank():
             text_surface = myfont_life.render(text['Life'], True, (255,255,255))
             window.blit(text_surface, (550 - len(str(text['Life'])), 10))
 
+    def move_random(self):
+        nb_rand = random.randint(0, 100)
+        posx = self.posx
+        speed = 0.001
+        if posx - nb_rand > window.get_width() / 2:
+            for _ in range(100000): 
+                self.posx -= speed
+        else:
+            for _ in range(100000): 
+                self.posx += speed
 
 class Bomb():
     def __init__(self, posx, posy, author):
@@ -190,12 +226,10 @@ while run:
         factor = random.randint(0, len(position_options) - 1)
         ennemi.angle = position_options[factor]
 
-
     if keys[pygame.K_TAB] and game.turn_move == 1:
         ennemi.launch_missile(bullets)
         game.moving = False
         game.turn_move = 0
-
 
     if bullets == []:
         shoot = 0
@@ -203,19 +237,19 @@ while run:
     if pygame.key.get_pressed()[pygame.K_UP] and event.type == pygame.KEYDOWN and counter == 0:
         counter = 1
         my_tank.angle = angle_options[counter]
-        pygame.time.delay(100)
+        pygame.time.delay(160)
     elif pygame.key.get_pressed()[pygame.K_UP] and event.type == pygame.KEYDOWN and counter == 1:
         counter = 2
         my_tank.angle = angle_options[counter]
-        pygame.time.delay(100)
+        pygame.time.delay(160)
     elif pygame.key.get_pressed()[pygame.K_DOWN] and event.type == pygame.KEYDOWN and counter == 2:
         counter = 1
         my_tank.angle = angle_options[counter]
-        pygame.time.delay(100)
+        pygame.time.delay(160)
     elif pygame.key.get_pressed()[pygame.K_DOWN] and event.type == pygame.KEYDOWN and counter == 1:
         counter = 0
         my_tank.angle = angle_options[counter]
-        pygame.time.delay(100)
+        pygame.time.delay(160)
         
     game.draw_game()
 
